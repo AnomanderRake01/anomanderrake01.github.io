@@ -1,0 +1,51 @@
+import IPython
+
+html_code = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .dashboard { width: 100%; max-width: 600px; background: #161b22; padding: 20px; border-radius: 12px; }
+        input[type="range"] { width: 100%; margin: 15px 0; accent-color: #58a6ff; }
+        .labels { display: flex; justify-content: space-between; font-size: 0.9em; color: #8b949e; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h3 style="color: #58a6ff; text-align: center;">System Integration: R Model</h3>
+        <canvas id="rModelChart"></canvas>
+        <div style="margin-top: 20px; text-align: center;">
+            <label id="sliderValue"><strong>System State: </strong> High Entropy (Chaos)</label>
+            <input type="range" id="stressSlider" min="0" max="100" value="0">
+            <div class="labels"><span>Maximum Instability</span><span>Nash Equilibrium</span></div>
+        </div>
+    </div>
+    <script>
+        const ctx = document.getElementById('rModelChart').getContext('2d');
+        const slider = document.getElementById('stressSlider');
+        const sliderLabel = document.getElementById('sliderValue');
+        const rModelChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Physical State', 'Structural Framework', 'Social Interface', 'Philosophical Autonomy'],
+                datasets: [{ data: [20, 30, 15, 90], backgroundColor: 'rgba(88, 166, 255, 0.2)', borderColor: '#ff7b72', borderWidth: 2 }]
+            },
+            options: { scales: { r: { angleLines: { color: '#30363d' }, grid: { color: '#30363d' }, pointLabels: { color: '#c9d1d9' }, ticks: { display: false, min: 0, max: 100 } } }, plugins: { legend: { display: false } } }
+        });
+        slider.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            rModelChart.data.datasets[0].data = [20 + (val * 0.8), 30 + (val * 0.7), 15 + (val * 0.85), 90 + (val * 0.1)];
+            if(val < 33) { sliderLabel.innerHTML = "<strong>State: </strong> Chaos"; rModelChart.data.datasets[0].borderColor = '#ff7b72'; }
+            else if(val < 80) { sliderLabel.innerHTML = "<strong>State: </strong> Active Optimization"; rModelChart.data.datasets[0].borderColor = '#f0883e'; }
+            else { sliderLabel.innerHTML = "<strong>State: </strong> Nash Equilibrium"; rModelChart.data.datasets[0].borderColor = '#3fb950'; }
+            rModelChart.update();
+        });
+    </script>
+</body>
+</html>
+"""
+
+display(IPython.display.HTML(html_code))
