@@ -2,25 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>R Model: 4D Helix Visualizer</title>
+    <title>R Model: 4D DNA Helix</title>
     <style>
-        body { margin: 0; background: #050505; color: #58a6ff; font-family: 'Courier New', monospace; overflow: hidden; }
-        #ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 500px; text-align: center; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border: 1px solid #30363d; z-index: 10; }
-        input[type=range] { width: 100%; accent-color: #58a6ff; cursor: pointer; }
-        .legend { display: flex; justify-content: space-around; font-size: 10px; margin-top: 10px; }
-        .label { color: #8b949e; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 300px; 
+              background: rgba(15, 15, 15, 0.9); padding: 20px; border-radius: 20px; 
+              border: 1px solid #333; text-align: center; color: #58a6ff; z-index: 100; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #58a6ff; }
+        .title { font-size: 12px; letter-spacing: 3px; margin-bottom: 10px; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <div class="label" id="status">System State: Chaos</div>
-        <input type="range" id="optimSlider" min="1" max="100" value="1">
-        <div class="legend">
-            <span style="color:#00f2ff">Physical</span>
-            <span style="color:#ff00ff">Structural</span>
-            <span style="color:#ffee00">Social</span>
-            <span style="color:#00ff88">Philosophy</span>
-        </div>
+        <div class="title" id="status">System State: Chaos</div>
+        <input type="range" id="optimSlider" min="0" max="100" value="10">
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -31,58 +26,70 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const colors = [0x00f2ff, 0xff00ff, 0ffee00, 0x00ff88];
-        const strands = [];
-        const numPoints = 100;
+        // Lighting for 3D depth
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x58a6ff, 1);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
 
-        // Create 4 strands
-        for (let s = 0; s < 4; s++) {
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(numPoints * 3);
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const material = new THREE.LineBasicMaterial({ color: colors[s], linewidth: 2 });
-            const line = new THREE.Line(geometry, material);
-            scene.add(line);
-            strands.push(line);
+        const colors = [0x00f2ff, 0xff00ff, 0xffee00, 0x00ff88];
+        const strands = [];
+        const strandGroup = new THREE.Group();
+        scene.add(strandGroup);
+
+        function createStrand(color, offset) {
+            const points = [];
+            for (let i = 0; i <= 60; i++) {
+                points.push(new THREE.Vector3(0, i, 0));
+            }
+            const curve = new THREE.CatmullRomCurve3(points);
+            const geometry = new THREE.TubeGeometry(curve, 100, 0.15, 8, false);
+            const material = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 });
+            const mesh = new THREE.Mesh(geometry, material);
+            return { mesh, offset };
         }
+
+        colors.forEach((c, i) => {
+            const s = createStrand(c, (i * Math.PI) / 2);
+            strands.push(s);
+            strandGroup.add(s.mesh);
+        });
 
         camera.position.z = 15;
-
-        function updateHelix(t, optimization) {
-            const tightness = 0.1 + (optimization * 0.05);
-            const radius = 4 - (optimization * 0.035);
-            
-            strands.forEach((line, sIndex) => {
-                const positions = line.geometry.attributes.position.array;
-                const offset = (sIndex * Math.PI) / 2; // Offset strands by 90 degrees
-
-                for (let i = 0; i < numPoints; i++) {
-                    const y = (i - numPoints / 2) * 0.2;
-                    const angle = y * tightness + t + offset;
-                    
-                    positions[i * 3] = Math.cos(angle) * radius;
-                    positions[i * 3 + 1] = y;
-                    positions[i * 3 + 2] = Math.sin(angle) * radius;
-                }
-                line.geometry.attributes.position.needsUpdate = true;
-            });
-        }
+        camera.position.y = 5;
 
         const slider = document.getElementById('optimSlider');
         const statusText = document.getElementById('status');
-        
-        let time = 0;
+
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.02;
-            const optVal = parseInt(slider.value);
-            
-            if (optVal < 30) statusText.innerText = "System State: Chaos";
-            else if (optVal < 80) statusText.innerText = "System State: Fixing System";
-            else statusText.innerText = "System State: Nash Equilibrium";
+            const val = slider.value / 100;
+            const time = Date.now() * 0.001;
 
-            updateHelix(time, optVal);
-            scene.rotation.y += 0.005;
+            // Mathematical "Fixing": Higher slider = tighter, more organized helix
+            const radius = 5 - (val * 3);
+            const frequency = 0.5 + (val * 1.5);
+
+            strands.forEach((s, index) => {
+                const positions = s.mesh.geometry.parameters.path.points;
+                for (let i = 0; i < positions.length; i++) {
+                    const y = (i - 30) * 0.4;
+                    const angle = y * frequency + time + s.offset;
+                    positions[i].x = Math.cos(angle) * radius;
+                    positions[i].y = y;
+                    positions[i].z = Math.sin(angle) * radius;
+                }
+                // Important: Redraw the tube geometry every frame to keep it smooth
+                s.mesh.geometry.dispose();
+                s.mesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(positions), 64, 0.12, 8, false);
+            });
+
+            if (val < 0.3) statusText.innerText = "System State: Chaos";
+            else if (val < 0.8) statusText.innerText = "System State: Fixing System";
+            else statusText.innerText = "System State: Equilibrium";
+
+            strandGroup.rotation.y += 0.005;
             renderer.render(scene, camera);
         }
 
